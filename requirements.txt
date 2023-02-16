@@ -80,7 +80,7 @@ jupyterlab-pygments==0.2.2
 jupyterlab-widgets==3.0.5
 jupyterlab_server==2.19.0
 lazy-object-proxy==1.7.1
-lxml==4.8.0
+lxml==4.9.1
 MarkupSafe==2.1.1
 marshmallow==3.15.0
 marshmallow-enum==1.5.1
