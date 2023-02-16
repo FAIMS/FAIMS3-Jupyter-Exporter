@@ -28,7 +28,7 @@ click-plugins==1.1.1
 cligj==0.7.2
 clint==0.5.1
 comm==0.1.2
-cryptography==36.0.2
+cryptography==39.0.1
 dataclasses-json==0.5.7
 dateparser==1.1.1
 debugpy==1.6.6
