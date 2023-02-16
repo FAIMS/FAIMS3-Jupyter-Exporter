@@ -29,42 +29,49 @@ logging.getLogger("urllib3").setLevel(logging.WARNING)
 
 logging.basicConfig(format=FORMAT, level=logging.WARNING)
 
-out = widgets.Output(layout={'border': '0px solid black'})
-out2 = widgets.Output(layout={'border': '0px solid black'})
+out = widgets.Output(layout={"border": "0px solid black"})
+out2 = widgets.Output(layout={"border": "0px solid black"})
 
-layout_hidden  = widgets.Layout(display = 'none')
-layout_visible = widgets.Layout(display = 'block')
+layout_hidden = widgets.Layout(display="none")
+layout_visible = widgets.Layout(display="block")
 
-desc_style = {'description_width': 'initial'}
+desc_style = {"description_width": "initial"}
 
 bearer_token = widgets.Text(
-    value='eyJqd3RfdG9rZW4iOiJleUpoYkdjaU9pSlNVekkxTmlJc0ltdHBaQ0k2SW5SbGMzUnBibWNpZlEuZXlKZlkyOTFZMmhrWWk1eWIyeGxjeUk2V3lKM2IzSnJjM0JoWTJWOGZHRmtiV2x1SWl3aVkzTnBjbTlmWjJWdlkyaGxiV2x6ZEhKNWZIeGhaRzFwYmlJc0ltTnNkWE4wWlhJdFlXUnRhVzRpWFN3aWJtRnRaU0k2SWtKeWFXRnVJRUpoYkd4emRXNHRVM1JoYm5SdmJpSXNJbk4xWWlJNkltUmxiblZpYVhNaUxDSnBZWFFpT2pFMk56WTFNRGsxTVRFc0ltbHpjeUk2SW5SbGMzUnBibWNpZlEuRUhRN3VkTGpzaFNDMXh5YXp4NHlwTUVvRGlNSjloeVBLNlF0X3BYc0I3OEVIaTcwTFl3Y0k1bE91QTVOTFBPbHpDcmhBaFM3LXd4MGlfVFlHVHRDaEZVUDF1eHNSLUJVR1NpNFNheVhERXFjSFJ4VU9SdU5qV2tkanpCR2N6TjdSTE5LTE1Cam5fc1VMNVI3NmlXUU5EY21YVHduZWprcE91UDFuRGdRN190TlZXaWJIcHJtclpjWlhlS3JkVi1VSFIzVFJ3NjQxdGtFWG55ZUVSTGxUWTZpaV9pM2FJN2U2bEVfU1VSUFBiM2hlQi0yYjZKUkx4amlrYzJ6ZHM2UTlmOFl2dEFQOXg1LTJFdl9naEZkT3JyVHh3NE8wS25pZGprVWFVYlF0Zk5Rdzg3NklMV29NVjZQczNucnR1TkJxVXd0M1VKeEZ6ME43S29OWHdsVXNRIiwicHVibGljX2tleSI6Ii0tLS0tQkVHSU4gUFVCTElDIEtFWS0tLS0tXG5NSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQTRCL2tkMWpKVzVXODNxY1Q4MkpjXG5zL1AxUEx5Y1BCT29ZdWhaQjJzcmluL0JCTnh1alpaK3pYQVhLYTJnQVZ6SklzWkloM01wLzJzTVViTDY1anJqXG51dFROaENVeDM2UlNOQ2pVL1dqU1VJa0lPamhBSDVOZlhzdkRKb2NsVDMzNnBmMjF1aERuZ0QrR254UDk5VDBhXG40NllvbitOM1IwdGJZN3NrY1hNSzFRZWovNUlsRW5DeDIxOUhuWkd2M0VZMnhnNUlTenpTQVVqaEZ2OXRwSDRsXG5TMU1ZTGNIRWNSTDcyME95RkwyMG1lR0NUZldwUzJubDRZQnE2azI3QU9ndnJqcS9obUJ2ZlpDU0lOUER3YmlnXG5GdUJ6TDJLMFFMdldhMEw4SmtBKzhuNXYvNXlIcU5vYm9HcG1ZaTR0aSs2SGpqYWN3NW1PZnlTOUZCZEFiRjltXG4rd0lEQVFBQlxuLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tXG4iLCJhbGciOiJSUzI1NiIsInVzZXJkYiI6Imh0dHBzOi8vdGVzdGluZy5kYi5mYWltcy5lZHUuYXUvcGVvcGxlIn0=',
-    placeholder='',
-    description='Bearer Token:',
+    value="",
+    placeholder="",
+    description="Bearer Token:",
     disabled=False,
-    style=desc_style,    
+    style=desc_style,
 )
 
 
 show_button = widgets.Button(
-    description="Show bearer token text field",
-    layout=layout_hidden)
+    description="Show bearer token text field", layout=layout_hidden
+)
+
 
 @out.capture()
 def decode_token():
     try:
         token = json.loads(base64.b64decode(bearer_token.value))
-        token['base_url'] = token['userdb'].replace("/people","")
-        token.update(jwt.decode(token['jwt_token'], token['public_key'], algorithms=[token['alg']]))
-        #pprint(token)
+        token["base_url"] = token["userdb"].replace("/people", "")
+        token.update(
+            jwt.decode(
+                token["jwt_token"], token["public_key"], algorithms=[token["alg"]]
+            )
+        )
+        # pprint(token)
         return token
     except:
         print("Unable to decode token")
+
 
 def visible_bearer(button):
     bearer_token.value = ""
     bearer_token.layout = layout_visible
     show_button.layout = layout_hidden
+
 
 def check_for_valid(change):
     try:
@@ -73,6 +80,7 @@ def check_for_valid(change):
     except:
         pass
 
+
 @out.capture()
 def validate_database_connection(button):
     out.clear_output()
@@ -80,35 +88,34 @@ def validate_database_connection(button):
     print("Validating...")
     try:
         token = decode_token()
-        #print(token)
-        #jwt_token = jwt.decode(token['jwt_token'], token['public_key'], algorithms=[token['alg']])
+        # print(token)
+        # jwt_token = jwt.decode(token['jwt_token'], token['public_key'], algorithms=[token['alg']])
         print(f"Hello: {token['name']} ({token['sub']}) on {token['base_url']}")
 
-        #out.append_stdout(token)
+        # out.append_stdout(token)
 
         bearer_token.layout = layout_hidden
         show_button.layout = layout_visible
-    
+
         display(notebook_select)
         display(overwrite_checkbox)
         display(list_checkbox)
         display(export_button)
-        #list_notebooks()
+        # list_notebooks()
         display(out2)
     except:
         bearer_token.layout = layout_visible
         show_button.layout = layout_hidden
         bearer_token.value = ""
-        
+
 
 validate_button = widgets.Button(
-    description='Validate Bearer Token',
+    description="Validate Bearer Token",
     disabled=False,
-    layout=Layout(width='20%', height="50px"),
-
-    button_style='', # 'success', 'info', 'warning', 'danger' or ''
-    tooltip='Click here to connect to the server in order to validate the Bearer Token',
-    icon='check' # (FontAwesome names without the `fa-` prefix)
+    layout=Layout(width="20%", height="50px"),
+    button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+    tooltip="Click here to connect to the server in order to validate the Bearer Token",
+    icon="check",  # (FontAwesome names without the `fa-` prefix)
 )
 
 
@@ -119,38 +126,42 @@ def list_notebooks():
     url = f"{token['base_url']}/projects/_find"
     r = requests.post(
         url,
-        headers= {"Authorization": token['jwt_token']},
+        headers={"Authorization": token["jwt_token"]},
         json={"selector": {"$not": {"metadata_db": None}}, "fields": ["_id", "name"]},
     )
     r.raise_for_status()
-    #print(r.json())
+    # print(r.json())
     valid_notebooks = []
-    roles = token['_couchdb.roles']
-    notebook_json = r.json()['docs']
-    #pprint(roles)
-    #pprint(notebook_json)
+    roles = token["_couchdb.roles"]
+    notebook_json = r.json()["docs"]
+    # pprint(roles)
+    # pprint(notebook_json)
     # TODO Check against google and other invites instead of dc-managed-roles
     for notebook in notebook_json:
         if "cluster-admin" in roles or f"{notebook['_id']}-admin" in roles:
-            valid_notebooks.append({"notebook":notebook, "role":"admin"})
+            valid_notebooks.append({"notebook": notebook, "role": "admin"})
         elif notebook in roles:
-            valid_notebooks.append({"notebook":notebook, "role":"user"})
-    #pprint(valid_notebooks)
+            valid_notebooks.append({"notebook": notebook, "role": "user"})
+    # pprint(valid_notebooks)
     return valid_notebooks
+
 
 @out2.capture()
 def prepare_select(notebook_list):
     options = []
     for notebook in notebook_list:
-        options.append((f"{notebook['notebook']['name']} ({notebook['role']})", notebook))
+        options.append(
+            (f"{notebook['notebook']['name']} ({notebook['role']})", notebook)
+        )
     return options
+
 
 @out2.capture()
 def export_notebook(button):
     out2.clear_output()
-    
+
     token = decode_token()
-    notebook_id = notebook_select.value['notebook']['_id']
+    notebook_id = notebook_select.value["notebook"]["_id"]
     server = token["base_url"]
     export_path_test = OUTPUT / f"{slugify(server)}+{notebook_id}"
     zip_filename = f"{slugify(datetime.datetime.now().isoformat(timespec='minutes'))}+{notebook_id}+{slugify(server.replace('https',''))}.zip"
@@ -162,25 +173,31 @@ def export_notebook(button):
             print("Output path exists. Please check 'overwrite' and try again!'")
             return
     print(f"Exporting notebook with id: {notebook_id} on {server}")
-    
-    
+
     export_csv(
         user=None,
         token=None,
-        bearer_token=token['jwt_token'],
+        bearer_token=token["jwt_token"],
         base_url=server,
         project_key=notebook_id,
         inline_attachments=False,
         external_attachments=True,
     )
     if export_path_test.exists():
-        
         print("Zipping output/ directory")
-        with zipfile.ZipFile(OUTPUT/zip_filename, mode='w', compression=zipfile.ZIP_BZIP2, compresslevel=5) as outputzip:
-            with tqdm.tqdm(export_path_test.glob('**/*')) as iterator:
+        with zipfile.ZipFile(
+            OUTPUT / zip_filename,
+            mode="w",
+            compression=zipfile.ZIP_BZIP2,
+            compresslevel=5,
+        ) as outputzip:
+            with tqdm.tqdm(export_path_test.glob("**/*")) as iterator:
                 for file in iterator:
-                    target_file=str(file).replace(f"{OUTPUT / slugify(server)}", f"{datetime.date.today().isoformat()}")
-                    if (list_checkbox.value):
+                    target_file = str(file).replace(
+                        f"{OUTPUT / slugify(server)}",
+                        f"{datetime.date.today().isoformat()}",
+                    )
+                    if list_checkbox.value:
                         iterator.write(target_file)
 
                     outputzip.write(file, arcname=target_file)
@@ -188,40 +205,41 @@ def export_notebook(button):
         print("No records exported")
     display(HTML("<h2>Downloads</h2><ul>"))
     for file in OUTPUT.glob("*.zip"):
-        local_url = HTML(f"<li><a download href='/files/{file}'>Download export: {str(file).replace('output/','')}</li>")
-        #local_file = FileLink(file, result_html_prefix="Click here to download: ")
+        local_url = HTML(
+            f"<li><a download href='/files/{file}'>Download export: {str(file).replace('output/','')}</li>"
+        )
+        # local_file = FileLink(file, result_html_prefix="Click here to download: ")
         display(local_url)
     display(HTML("</ul>"))
-    
-#list_notebooks()
+
+
+# list_notebooks()
 notebook_select = widgets.Dropdown(
     options=prepare_select(list_notebooks()),
     description="Choose notebook to export",
     style=desc_style,
-    layout=Layout(width='60%', height="50px"),   
+    layout=Layout(width="60%", height="50px"),
 )
 
 overwrite_checkbox = widgets.Checkbox(
     value=False,
     description="Overwrite output directory when exporting",
     indent=False,
-    style=desc_style
+    style=desc_style,
 )
 list_checkbox = widgets.Checkbox(
-    value=True,
-    description="List files in export",
-    indent=False,
-    style=desc_style
+    value=True, description="List files in export", indent=False, style=desc_style
 )
-    
-export_button = widgets.Button(
-    description='Export notebook',
-    disabled=False,
-    layout=Layout(width='20%', height="50px"),
 
-    button_style='', # 'success', 'info', 'warning', 'danger' or ''
-    tooltip='Click here to connect to the server in order to validate the Bearer Token',
-    icon='save')
+export_button = widgets.Button(
+    description="Export notebook",
+    disabled=False,
+    layout=Layout(width="20%", height="50px"),
+    button_style="",  # 'success', 'info', 'warning', 'danger' or ''
+    tooltip="Click here to connect to the server in order to validate the Bearer Token",
+    icon="save",
+)
+
 
 def make_interface():
     display(show_button)
