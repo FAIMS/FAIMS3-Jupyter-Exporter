@@ -5,6 +5,9 @@ channels:
   - defaults
 dependencies:
   - python=3.10.9
+  - geopandas
+  - Fiona
+  - geojson
   - pip
   - pip:
       - -r requirements.txt
