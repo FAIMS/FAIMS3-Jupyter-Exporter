@@ -85,29 +85,35 @@ def check_for_valid(change):
 def validate_database_connection(button):
     out.clear_output()
     out2.clear_output()
-    print("Validating...")
-    try:
-        token = decode_token()
-        # print(token)
-        # jwt_token = jwt.decode(token['jwt_token'], token['public_key'], algorithms=[token['alg']])
-        print(f"Hello: {token['name']} ({token['sub']}) on {token['base_url']}")
+    if bearer_token.value:
+        print("Validating...")
+        try:
+            token = decode_token()
+            # print(token)
+            jwt_token = jwt.decode(
+                token["jwt_token"], token["public_key"], algorithms=[token["alg"]]
+            )
+            print(f"Hello: {token['name']} ({token['sub']}) on {token['base_url']}")
 
-        # out.append_stdout(token)
+            # out.append_stdout(token)
 
-        bearer_token.layout = layout_hidden
-        show_button.layout = layout_visible
-        notebook_select.values=prepare_select(list_notebooks())
-        
-        display(notebook_select)
-        display(overwrite_checkbox)
-        display(list_checkbox)
-        display(export_button)
-        # list_notebooks()
-        display(out2)
-    except:
-        bearer_token.layout = layout_visible
-        show_button.layout = layout_hidden
-        bearer_token.value = ""
+            bearer_token.layout = layout_hidden
+            show_button.layout = layout_visible
+            notebooks = prepare_select(list_notebooks())
+            # print(notebooks)
+            notebook_select.options = notebooks
+
+            display(notebook_select)
+            display(overwrite_checkbox)
+            display(list_checkbox)
+            display(export_button)
+            # list_notebooks()
+            display(out2)
+        except Exception as e:
+            print(f"Please tell brian@faims.edu.au: {e}")
+            bearer_token.layout = layout_visible
+            show_button.layout = layout_hidden
+            bearer_token.value = ""
 
 
 validate_button = widgets.Button(
@@ -216,7 +222,7 @@ def export_notebook(button):
 
 # list_notebooks()
 notebook_select = widgets.Dropdown(
-    options=[],
+    options=["No notebooks loaded"],
     description="Choose notebook to export",
     style=desc_style,
     layout=Layout(width="60%", height="50px"),
