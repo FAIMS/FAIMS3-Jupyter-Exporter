@@ -19,12 +19,12 @@ from pprint import pprint
 from pprint import pformat
 import logging
 import tempfile
-import tabulate
 import pandas
 
 from mimetypes import guess_extension, guess_type
 
 LOCAL_TIMEZONE = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
+
 
 class TqdmLoggingHandler(logging.Handler):
     # https://stackoverflow.com/a/38739634
@@ -37,11 +37,13 @@ class TqdmLoggingHandler(logging.Handler):
             tqdm.tqdm.write(msg)
             self.flush()
         except Exception:
-            self.handleError(record)  
+            self.handleError(record)
+
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
 log.addHandler(TqdmLoggingHandler())
+
 
 def create_new_revision(
     *, avps, record_id, new_id, parents, created_by, created, type, deleted=False
@@ -86,13 +88,16 @@ def create_new_avp(
         avp["_attachments"] = attachments
     return avp
 
+
 class BearerAuth(requests.auth.AuthBase):
     # https://stackoverflow.com/a/58055668
     def __init__(self, token):
         self.token = token
+
     def __call__(self, r):
         r.headers["authorization"] = "Bearer " + self.token
         return r
+
 
 class CouchDBHelper:
     def __init__(
@@ -131,7 +136,7 @@ class CouchDBHelper:
             self.auth_token = (user, token)
         if bearer_token:
             self.auth_token = BearerAuth(bearer_token)
-        
+
         # logging.debug(f"Initialising with {project_url}")
         r = requests.get(project_url, auth=self.auth_token)
         r.raise_for_status()
@@ -160,7 +165,8 @@ class CouchDBHelper:
         # if for_export:
         #     self.fetch_and_flatten_records()
         self.fetch_project_metadata()
-    def make_request_get(self, url):        
+
+    def make_request_get(self, url):
         # print(self.user, self.token, self.bearer_token)
         # if self.user and self.token:
         #     print("Using user auth")
@@ -176,7 +182,7 @@ class CouchDBHelper:
         r.raise_for_status()
         return r
         raise ValueError("Unable to authenticate with credentials provided")
-        
+
     def get_multivalued_fields(self):
         """
         Get field names of fields which support multiple stored values.
@@ -187,10 +193,9 @@ class CouchDBHelper:
         multivalued_fields = {}
         url = f"{self.base_url}/{self.metadata}/ui-specification"
 
-        #r = requests.get(url, auth=(self.user, self.token))
-        #r.raise_for_status()
+        # r = requests.get(url, auth=(self.user, self.token))
+        # r.raise_for_status()
         r = self.make_request_get(url)
-        
 
         for element in r.json()["fields"]:
             data = r.json()["fields"][element]
@@ -224,10 +229,10 @@ class CouchDBHelper:
         dupe_check = defaultdict(list)
         url = f"{self.base_url}/{self.metadata}/ui-specification"
 
-        #r = requests.get(url, auth=(self.user, self.token))
-        #r.raise_for_status()
+        # r = requests.get(url, auth=(self.user, self.token))
+        # r.raise_for_status()
         r = self.make_request_get(url)
-        
+
         for record in r.json()["viewsets"]:
             label = r.json()["viewsets"][record]["label"]
             record_type_names[record] = label
@@ -446,8 +451,8 @@ class CouchDBHelper:
         """
         url = f"{self.base_url}/{self.project}/{document_id}"
         r = self.make_request_get(url)
-        #r = requests.get(url, auth=(self.user, self.token))
-        #r.raise_for_status()
+        # r = requests.get(url, auth=(self.user, self.token))
+        # r.raise_for_status()
         return r.json()
 
     def _upload_document_to_couchdb(self, doc):
@@ -587,7 +592,11 @@ class CouchDBHelper:
                                 ):
                                     new_data = []
                                     for sub_item in record[key][item]["data"]["value"]:
-                                        new_data.append(sub_item.get("record_label", "label_unknown"))
+                                        new_data.append(
+                                            sub_item.get(
+                                                "record_label", "label_unknown"
+                                            )
+                                        )
                                     record[key][item]["data"]["value"] = new_data
                                 if not record[key][item]["data"]["value"]:
                                     record[key][item]["data"]["value"] = None
@@ -595,7 +604,6 @@ class CouchDBHelper:
                             if isinstance(
                                 record[key][item].get("data", {}).get("value"), dict
                             ):
-
                                 if "geometry" in record[key][item]["data"]["value"]:
                                     orig = record[key][item]["data"]["value"].copy()
                                     orig_json = geojson.loads(json.dumps(orig))
@@ -1060,7 +1068,7 @@ class CouchDBHelper:
                                     with requests.get(
                                         attach_url,
                                         auth=self.auth_token,
-                                    ) as attach_get:                                    
+                                    ) as attach_get:
                                         attach_get.raise_for_status()
                                         file = f"data:{attach_get.headers['Content-Type']};base64,{base64.b64encode(attach_get.content).decode('utf-8')}"
                                         record[avp_type]["attachments"].append(
@@ -1070,7 +1078,9 @@ class CouchDBHelper:
                                             }
                                         )
                                 except requests.exceptions.HTTPError as e:
-                                    logging.error(f"Could not fetch attachment for {attach_url}. Error: {e}\n")
+                                    logging.error(
+                                        f"Could not fetch attachment for {attach_url}. Error: {e}\n"
+                                    )
                             # Tranche 1 attachments
                             for attachment in avp.get("_attachments", {}):
                                 # https://alpha.db.faims.edu.au
@@ -1194,7 +1204,6 @@ class CouchDBHelper:
                         records[record_type][record_id] = record
 
                 else:
-
                     records[record_type][
                         record_id
                     ] = record  # 3.9 feature of dict union operator. Works exactly the way I wanted it to.

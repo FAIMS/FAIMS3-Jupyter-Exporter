@@ -96,7 +96,8 @@ def validate_database_connection(button):
 
         bearer_token.layout = layout_hidden
         show_button.layout = layout_visible
-
+        notebook_select.values=prepare_select(list_notebooks())
+        
         display(notebook_select)
         display(overwrite_checkbox)
         display(list_checkbox)
@@ -215,7 +216,7 @@ def export_notebook(button):
 
 # list_notebooks()
 notebook_select = widgets.Dropdown(
-    options=prepare_select(list_notebooks()),
+    options=[],
     description="Choose notebook to export",
     style=desc_style,
     layout=Layout(width="60%", height="50px"),
