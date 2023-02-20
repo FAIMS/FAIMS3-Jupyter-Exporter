@@ -94,7 +94,7 @@ Send2Trash==1.8.0
 shapely==2.0.1
 simplekml==1.3.6
 six==1.16.0
-slugify==0.0.1
+python-slugify==8.0.0
 sniffio==1.3.0
 soupsieve==2.4
 stack-data==0.6.2
