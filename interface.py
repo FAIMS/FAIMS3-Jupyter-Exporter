@@ -19,6 +19,7 @@ import os
 import tqdm
 import zipfile
 from IPython.display import FileLink, HTML
+import IPython
 
 OUTPUT = Path("output")
 FORMAT = (
@@ -211,9 +212,10 @@ def export_notebook(button):
     else:
         print("No records exported")
     display(HTML("<h2>Downloads</h2><ul>"))
+
     for file in OUTPUT.glob("*.zip"):
         local_url = HTML(
-            f"<li><a download href='/files/{file}'>Download export: {str(file).replace('output/','')}</li>"
+            f"<li><a href='/{file}'>Download export: {str(file).replace('output/','')}</li>"
         )
         # local_file = FileLink(file, result_html_prefix="Click here to download: ")
         display(local_url)
@@ -229,7 +231,7 @@ notebook_select = widgets.Dropdown(
 )
 
 overwrite_checkbox = widgets.Checkbox(
-    value=False,
+    value=True,
     description="Overwrite output directory when exporting",
     indent=False,
     style=desc_style,

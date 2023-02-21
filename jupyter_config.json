@@ -1,0 +1,8 @@
+{
+  "VoilaConfiguration": {
+    "theme": "dark",
+    "template": "gridstack",
+    "file_whitelist": "['.*']",
+    "file_blacklist": "['private', '.*\.ipynb', '\..*']"
+  }
+}
