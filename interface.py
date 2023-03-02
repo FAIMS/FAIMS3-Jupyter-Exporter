@@ -18,7 +18,7 @@ import shutil
 import os
 import tqdm
 import zipfile
-from IPython.display import FileLink, HTML
+from IPython.display import FileLink, HTML, display
 import IPython
 
 OUTPUT = Path("output")
@@ -50,6 +50,44 @@ bearer_token = widgets.Text(
 show_button = widgets.Button(
     description="Show bearer token text field", layout=layout_hidden
 )
+
+import logging
+import tqdm
+import time
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
+
+class TqdmLoggingHandler(logging.Handler):
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.tqdm.write(msg)
+            self.flush()
+        except Exception:
+            self.handleError(record)
+
+
+log.addHandler(TqdmLoggingHandler())
+
+
+@out.capture()
+def in_notebook():
+    try:
+        from IPython import get_ipython
+
+        print(get_ipython().config)
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+            return False
+    except ImportError:
+        return False
+    except AttributeError:
+        return False
+    return True
 
 
 @out.capture()
@@ -105,8 +143,8 @@ def validate_database_connection(button):
             notebook_select.options = notebooks
 
             display(notebook_select)
-            display(overwrite_checkbox)
-            display(list_checkbox)
+            # display(overwrite_checkbox)
+            # display(list_checkbox)
             display(export_button)
             # list_notebooks()
             display(out2)
@@ -146,7 +184,11 @@ def list_notebooks():
     # pprint(notebook_json)
     # TODO Check against google and other invites instead of dc-managed-roles
     for notebook in notebook_json:
-        if "cluster-admin" in roles or f"{notebook['_id']}-admin" in roles:
+        if (
+            "cluster-admin" in roles
+            or f"{notebook['_id']}-admin" in roles
+            or f"{notebook['_id']}||admin" in roles
+        ):
             valid_notebooks.append({"notebook": notebook, "role": "admin"})
         elif notebook in roles:
             valid_notebooks.append({"notebook": notebook, "role": "user"})
@@ -191,8 +233,9 @@ def export_notebook(button):
         inline_attachments=False,
         external_attachments=True,
     )
+
     if export_path_test.exists():
-        print("Zipping output/ directory")
+        # print("Zipping output/ directory")
         with zipfile.ZipFile(
             OUTPUT / zip_filename,
             mode="w",
@@ -205,17 +248,22 @@ def export_notebook(button):
                         f"{OUTPUT / slugify(server)}",
                         f"{datetime.date.today().isoformat()}",
                     )
-                    if list_checkbox.value:
-                        iterator.write(target_file)
+                    # if list_checkbox.value:
+                    #     iterator.write(target_file)
 
                     outputzip.write(file, arcname=target_file)
     else:
         print("No records exported")
     display(HTML("<h2>Downloads</h2><ul>"))
 
+    running_in_voila = os.environ.get("SERVER_SOFTWARE", "jupyter").startswith("voila")
+    files_path = ""
+    if not running_in_voila:
+        files_path = "files/"
+
     for file in OUTPUT.glob("*.zip"):
         local_url = HTML(
-            f"<li><a href='/{file}'>Download export: {str(file).replace('output/','')}</li>"
+            f"<li><a href='/{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
         )
         # local_file = FileLink(file, result_html_prefix="Click here to download: ")
         display(local_url)
