@@ -2,7 +2,7 @@ import sys
 import logging
 import requests
 import re
-import tqdm
+from tqdm.auto import tqdm
 from uuid import uuid4
 import base64
 import traceback
@@ -34,7 +34,7 @@ class TqdmLoggingHandler(logging.Handler):
     def emit(self, record):
         try:
             msg = self.format(record)
-            tqdm.tqdm.write(msg)
+            tqdm.write(msg)
             self.flush()
         except Exception:
             self.handleError(record)
@@ -519,7 +519,11 @@ class CouchDBHelper:
         )
 
     def flatten_records(
-        self, hide_empty=True, per_field_users=False, external_attachments=True
+        self,
+        hide_empty=True,
+        per_field_users=False,
+        external_attachments=True,
+        iterator="text",
     ):
         """
         Gets all records from a FAIMS3 CouchDB instance.
@@ -531,7 +535,7 @@ class CouchDBHelper:
         # TODO remove empty cols for uncertainty, anntoations
         # Remove per-field user details (toggleable)
 
-        records = self.fetch_records_for_roundtrip()
+        records = self.fetch_records_for_roundtrip(iterator=iterator)
         dataframes = {}
         attachments = []
         shapes = {}
@@ -833,7 +837,11 @@ class CouchDBHelper:
         # return records
 
     def fetch_records_for_roundtrip(
-        self, match_uuids=[], disable_progress_bars=False, include_attachments=True
+        self,
+        match_uuids=[],
+        disable_progress_bars=False,
+        include_attachments=True,
+        iterator="text",
     ):
         """
         Gets all records from a FAIMS3 CouchDB instance.
@@ -845,7 +853,7 @@ class CouchDBHelper:
         records = {}
 
         logging.info(f"Exporting: {self.project}")
-        record_iter = tqdm.tqdm(
+        record_iter = tqdm(
             self.get_records(), desc=f"JSON records", disable=disable_progress_bars
         )
 

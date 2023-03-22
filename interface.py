@@ -16,7 +16,7 @@ import datetime
 import logging
 import shutil
 import os
-import tqdm
+from tqdm.auto import tqdm
 import zipfile
 from IPython.display import FileLink, HTML, display
 import IPython
@@ -41,10 +41,15 @@ desc_style = {"description_width": "initial"}
 
 import os
 
-print("ignore this, sorry")
+envvars = []
 for name, value in os.environ.items():
-    print("{0}: {1}".format(name, value))
-print("stop ignoring this now... ")
+    envvars.append("<li><pre>{0}: {1}</pre></li>".format(name, value))
+display(
+    HTML(
+        f"<details><summary>Debug Variables</summary><ul>{' '.join(envvars)}</ul></details>"
+    )
+)
+
 
 bearer_token = widgets.Text(
     value="",
@@ -60,27 +65,10 @@ show_button = widgets.Button(
 )
 
 import logging
-import tqdm
 import time
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
-
-
-class TqdmLoggingHandler(logging.Handler):
-    def __init__(self, level=logging.NOTSET):
-        super().__init__(level)
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            tqdm.tqdm.write(msg)
-            self.flush()
-        except Exception:
-            self.handleError(record)
-
-
-log.addHandler(TqdmLoggingHandler())
 
 
 @out.capture()
@@ -250,7 +238,10 @@ def export_notebook(button):
             compression=zipfile.ZIP_BZIP2,
             compresslevel=5,
         ) as outputzip:
-            with tqdm.tqdm(export_path_test.glob("**/*")) as iterator:
+            with tqdm(
+                export_path_test.glob("**/*"),
+                desc="Preparing zip file",
+            ) as iterator:
                 for file in iterator:
                     target_file = str(file).replace(
                         f"{OUTPUT / slugify(server)}",
@@ -268,19 +259,18 @@ def export_notebook(button):
 
     port_list = [note["port"] for note in notebookapp.list_running_servers()]
 
-    if ("8866" in port_list) or (
-        running_in_voila and os.environ["SERVER_PORT"] == 8866
-    ):
+    if running_in_voila and os.environ["SERVER_PORT"] == "8866":
         files_path = ""
     else:
         files_path = "files/"
     print(
-        f"Debug for brian: {running_in_voila}, {port_list}, {pformat([note for note in notebookapp.list_running_servers()])}"
+        f"Debug for brian: {running_in_voila}, {port_list}, {files_path}, {os.environ['SERVER_PORT']}, {pformat([note for note in notebookapp.list_running_servers()])}"
     )
+    print(running_in_voila and os.environ["SERVER_PORT"] == "8866")
 
     for file in OUTPUT.glob("*.zip"):
         local_url = HTML(
-            f"<li><a href='../{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
+            f"<li><a href='{os.environ['VOILA_BASE_URL']}{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
         )
         # local_file = FileLink(file, result_html_prefix="Click here to download: ")
         display(local_url)

@@ -72,17 +72,27 @@ OUTPUT_DIR = Path("output")
 
 
 def export_csv(
-    user, token, base_url, project_key, inline_attachments, external_attachments, bearer_token=None
+    user,
+    token,
+    base_url,
+    project_key,
+    inline_attachments,
+    external_attachments,
+    bearer_token=None,
 ):
     # shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
     clean_url = slugify(base_url)
     project_path = OUTPUT_DIR / f"{clean_url}+{project_key}"
     # print(base_url)
     faims = CouchDBHelper(
-        user=user, token=token, base_url=base_url, project_key=project_key, bearer_token=bearer_token
+        user=user,
+        token=token,
+        base_url=base_url,
+        project_key=project_key,
+        bearer_token=bearer_token,
     )
 
-    records, attachments, shapes = faims.flatten_records()
+    records, attachments, shapes = faims.flatten_records(iterator="notebook")
     if records:
         project_path.mkdir(parents=True)
         for key, dataframe in records.items():
@@ -109,7 +119,6 @@ def export_csv(
                 engine="xlsxwriter",
             )
         for attachment in attachments:
-
             filename = attachment["filename"]
             data = attachment["data"]
             attachment_path = project_path / attachment["path"]
