@@ -263,7 +263,7 @@ def export_notebook(button):
 
     for file in OUTPUT.glob("*.zip"):
         local_url = HTML(
-            f"<li><a href='/{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
+            f"<li><a href='../{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
         )
         # local_file = FileLink(file, result_html_prefix="Click here to download: ")
         display(local_url)
