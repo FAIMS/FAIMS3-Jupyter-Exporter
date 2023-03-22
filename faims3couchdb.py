@@ -932,10 +932,14 @@ class CouchDBHelper:
                             "parent"
                         ]
                         logging.debug(pformat(this_reln))
+                        # pprint(this_reln)
 
-                        record["metadata"]["relationship_verb"] = this_reln[
-                            "relation_type_vocabPair"
-                        ][0]
+                        if this_reln["relation_type_vocabPair"]:
+                            record["metadata"]["relationship_verb"] = this_reln[
+                                "relation_type_vocabPair"
+                            ][0]
+                        else:
+                            record["metadata"]["relationship_verb"] = "linked with"
                         record["metadata"]["relationship_parent_record_hrid"] = None
                         record["metadata"]["relationship_parent_record_form"] = None
                         record["metadata"]["relationship_parent_record_id"] = this_reln[
@@ -1213,9 +1217,11 @@ class CouchDBHelper:
                 if "relationship_parent_record_id" in record["metadata"]:
                     records[form][key]["metadata"][
                         "relationship_parent_record_hrid"
-                    ] = self.identifiers[
-                        records[form][key]["metadata"]["relationship_parent_record_id"]
-                    ]
+                    ] = self.identifiers.get(
+                        records[form][key]["metadata"]["relationship_parent_record_id"],
+                        "unknown parent",
+                    )
+
                     records[form][key]["metadata"][
                         "relationship_parent_record_form"
                     ] = self.record_type_names[
