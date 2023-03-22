@@ -21,6 +21,7 @@ import zipfile
 from IPython.display import FileLink, HTML, display
 import IPython
 from notebook import notebookapp
+import tarfile
 
 OUTPUT = Path("output")
 FORMAT = (
@@ -211,6 +212,7 @@ def export_notebook(button):
     server = token["base_url"]
     export_path_test = OUTPUT / f"{slugify(server)}+{notebook_id}"
     zip_filename = f"{slugify(datetime.datetime.now().isoformat(timespec='minutes'))}+{notebook_id}+{slugify(server.replace('https',''))}.zip"
+    tar_filename = f"{slugify(datetime.datetime.now().isoformat(timespec='minutes'))}+{notebook_id}+{slugify(server.replace('https',''))}.tgz"
     if export_path_test.exists():
         if overwrite_checkbox.value:
             shutil.rmtree(OUTPUT, ignore_errors=True)
@@ -232,25 +234,39 @@ def export_notebook(button):
 
     if export_path_test.exists():
         # print("Zipping output/ directory")
-        with zipfile.ZipFile(
-            OUTPUT / zip_filename,
-            mode="w",
-            compression=zipfile.ZIP_BZIP2,
-            compresslevel=5,
-        ) as outputzip:
+        # with zipfile.ZipFile(
+        #     OUTPUT / zip_filename,
+        #     mode="w",
+        #     compression=zipfile.ZIP_BZIP2,
+        #     compresslevel=5,
+        # ) as outputzip:
+        #     with tqdm(
+        #         export_path_test.glob("**/*"),
+        #         desc="Preparing zip file",
+        #     ) as iterator:
+        #         for file in iterator:
+        #             target_file = str(file).replace(
+        #                 f"{OUTPUT / slugify(server)}",
+        #                 f"{datetime.date.today().isoformat()}",
+        #             )
+        #             # if list_checkbox.value:
+        #             #     iterator.write(target_file)
+
+        #             outputzip.write(file, arcname=target_file)
+        with tarfile.open(OUTPUT / tar_filename, "w:gz") as outputtar:
             with tqdm(
                 export_path_test.glob("**/*"),
-                desc="Preparing zip file",
+                desc="Preparing tar file",
             ) as iterator:
                 for file in iterator:
                     target_file = str(file).replace(
                         f"{OUTPUT / slugify(server)}",
                         f"{datetime.date.today().isoformat()}",
                     )
+                    outputtar.add(file, arcname=target_file, recursive=False)
                     # if list_checkbox.value:
                     #     iterator.write(target_file)
 
-                    outputzip.write(file, arcname=target_file)
     else:
         print("No records exported")
     display(HTML("<h2>Downloads</h2><ul>"))
@@ -268,7 +284,7 @@ def export_notebook(button):
     )
     print(running_in_voila and os.environ["SERVER_PORT"] == "8866")
 
-    for file in OUTPUT.glob("*.zip"):
+    for file in OUTPUT.glob("*.tgz"):
         local_url = HTML(
             f"<li><a href='{os.environ['VOILA_BASE_URL']}{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
         )
