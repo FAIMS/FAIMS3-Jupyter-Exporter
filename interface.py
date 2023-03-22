@@ -3,7 +3,7 @@ from ipywidgets import Button, Layout
 import jwt
 import base64
 import json
-from pprint import pprint
+from pprint import pprint, pformat
 
 
 import requests
@@ -20,6 +20,7 @@ import tqdm
 import zipfile
 from IPython.display import FileLink, HTML, display
 import IPython
+from notebook import notebookapp
 
 OUTPUT = Path("output")
 FORMAT = (
@@ -37,6 +38,13 @@ layout_hidden = widgets.Layout(display="none")
 layout_visible = widgets.Layout(display="block")
 
 desc_style = {"description_width": "initial"}
+
+import os
+
+print("ignore this, sorry")
+for name, value in os.environ.items():
+    print("{0}: {1}".format(name, value))
+print("stop ignoring this now... ")
 
 bearer_token = widgets.Text(
     value="",
@@ -257,9 +265,18 @@ def export_notebook(button):
     display(HTML("<h2>Downloads</h2><ul>"))
 
     running_in_voila = os.environ.get("SERVER_SOFTWARE", "jupyter").startswith("voila")
-    files_path = ""
-    if not running_in_voila:
+
+    port_list = [note["port"] for note in notebookapp.list_running_servers()]
+
+    if ("8866" in port_list) or (
+        running_in_voila and os.environ["SERVER_PORT"] == 8866
+    ):
+        files_path = ""
+    else:
         files_path = "files/"
+    print(
+        f"Debug for brian: {running_in_voila}, {port_list}, {pformat([note for note in notebookapp.list_running_servers()])}"
+    )
 
     for file in OUTPUT.glob("*.zip"):
         local_url = HTML(
