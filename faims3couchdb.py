@@ -931,7 +931,7 @@ class CouchDBHelper:
                         this_reln = revision_bykey[revision_key]["relationship"][
                             "parent"
                         ]
-                        # logging.debug(pformat(this_reln))
+                        logging.debug(pformat(this_reln))
 
                         record["metadata"]["relationship_verb"] = this_reln[
                             "relation_type_vocabPair"
@@ -946,14 +946,12 @@ class CouchDBHelper:
                         ]
                     elif "linked" in revision_bykey[revision_key]["relationship"]:
                         # BBS Resume
-                        logging.debug(
-                            pformat(revision_bykey[revision_key]["relationship"])
-                        )
 
                         this_reln = revision_bykey[revision_key]["relationship"][
                             "linked"
                         ]
-                        # logging.debug(pformat(this_reln))
+                        print(pformat(this_reln))
+                        logging.debug(pformat(this_reln))
 
                         record["metadata"]["relationship_verb"] = this_reln[
                             "relation_type_vocabPair"
