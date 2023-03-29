@@ -22,6 +22,28 @@ from IPython.display import FileLink, HTML, display
 import IPython
 from notebook import notebookapp
 import tarfile
+import logging
+import time
+import os
+from github import Github
+import traceback
+import textwrap
+import functools
+
+
+class BearerAuth(requests.auth.AuthBase):
+    # https://stackoverflow.com/a/58055668
+    def __init__(self, token):
+        self.token = token
+
+    def __call__(self, r):
+        r.headers["authorization"] = "Bearer " + self.token
+        return r
+
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+
 
 OUTPUT = Path("output")
 FORMAT = (
@@ -34,13 +56,13 @@ logging.basicConfig(format=FORMAT, level=logging.WARNING)
 
 out = widgets.Output(layout={"border": "0px solid black"})
 out2 = widgets.Output(layout={"border": "0px solid black"})
+out_url = widgets.Output(layout={"border": "0px solid black"})
 
 layout_hidden = widgets.Layout(display="none")
 layout_visible = widgets.Layout(display="block")
 
 desc_style = {"description_width": "initial"}
 
-import os
 
 envvars = []
 for name, value in os.environ.items():
@@ -62,14 +84,102 @@ bearer_token = widgets.Text(
 
 
 show_button = widgets.Button(
-    description="Show bearer token text field", layout=layout_hidden
+    description="Show bearer token text field",
+    layout=layout_hidden,
 )
 
-import logging
-import time
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.INFO)
+github_url_text = widgets.Text(
+    description="Url of Notebook on Github",
+    # value="https://github.com/FAIMS/FAIMS3-notebook-template",
+    # layout=layout_hidden,
+    style=desc_style,
+    continuous_update=False,
+    layout=Layout(width="60%", height="50px"),
+    placeholder="https://github.com/FAIMS/FAIMS3-notebook-template",
+)
+
+
+readme_url = ""
+citation_url = ""
+
+
+def get_exporter_metadata():
+    token = decode_token()
+    notebook_id = notebook_select.value["notebook"]["_id"]
+    auth_token = BearerAuth(token["jwt_token"])
+
+    url = f"{token['base_url']}/metadata-{notebook_id}/exporter-metadata"
+
+    r = requests.get(url, auth=auth_token)
+    # r.raise_for_status()
+    doc = r.json()
+    return doc
+
+
+@out_url.capture()
+def validateURL(change):
+    urlsplit = change.new.split("/")
+    token = decode_token()
+    notebook_id = notebook_select.value["notebook"]["_id"]
+    auth_token = BearerAuth(token["jwt_token"])
+    url = f"{token['base_url']}/metadata-{notebook_id}/exporter-metadata"
+    doc = get_exporter_metadata()
+
+    if change.new != doc.get("repository") and notebook_id and len(urlsplit) > 3:
+        try:
+            if "github.com" in urlsplit[2]:
+                organisation = urlsplit[3]
+                repo_name = urlsplit[4]
+                display(HTML(f"<li>Parsed {organisation=} {repo_name=}</li>"))
+                g = Github()
+                repo = g.get_repo(f"{organisation}/{repo_name}")
+                readme = repo.get_contents("README.md")
+                content = textwrap.shorten(
+                    base64.b64decode(readme.content).decode("utf-8"), width=100
+                )
+                display(
+                    HTML(
+                        f"Fetching readme from {repo.name}: <div><pre>{content}</pre></div>"
+                    )
+                )
+                if readme:
+                    if "not_found" in doc.get("error", ""):
+                        r2 = requests.put(
+                            url,
+                            auth=auth_token,
+                            json={
+                                "repository": change.new,
+                                "organisation": organisation,
+                                "repo_name": repo_name,
+                            },
+                        )
+                        r2.raise_for_status()
+                        print("Created repository url in database")
+                    else:
+                        r2 = requests.put(
+                            url,
+                            auth=auth_token,
+                            json={
+                                "repository": change.new,
+                                "organisation": organisation,
+                                "repo_name": repo_name,
+                                "_rev": doc["_rev"],
+                            },
+                        )
+                        r2.raise_for_status()
+
+                        print("Updated repository url to database")
+
+                return True
+        except Exception:
+            display(HTML(f"<li>unable to parse github url.</li>"))
+            print(traceback.print_exc())
+            return False
+    return False
+
+
+github_url_text.observe(validateURL, "value")
 
 
 @out.capture()
@@ -138,10 +248,13 @@ def validate_database_connection(button):
             notebooks = prepare_select(list_notebooks())
             # print(notebooks)
             notebook_select.options = notebooks
-
+            notebook_select.observe(get_notebook_readme, names="value")
+            get_notebook_readme(change={"new": notebook_select.value})
             display(notebook_select)
             # display(overwrite_checkbox)
             # display(list_checkbox)
+            display(github_url_text)
+            display(out_url)
             display(export_button)
             # list_notebooks()
             display(out2)
@@ -193,6 +306,9 @@ def list_notebooks():
     return valid_notebooks
 
 
+github_url_text.observe(validateURL, "value")
+
+
 @out2.capture()
 def prepare_select(notebook_list):
     options = []
@@ -211,6 +327,8 @@ def export_notebook(button):
     notebook_id = notebook_select.value["notebook"]["_id"]
     server = token["base_url"]
     export_path_test = OUTPUT / f"{slugify(server)}+{notebook_id}"
+    backup = export_path_test / "database_backup"
+
     zip_filename = f"{slugify(datetime.datetime.now().isoformat(timespec='minutes'))}+{notebook_id}+{slugify(server.replace('https',''))}.zip"
     tar_filename = f"{slugify(datetime.datetime.now().isoformat(timespec='minutes'))}+{notebook_id}+{slugify(server.replace('https',''))}.tgz"
     if export_path_test.exists():
@@ -231,6 +349,72 @@ def export_notebook(button):
         inline_attachments=False,
         external_attachments=True,
     )
+
+    backup.mkdir(parents=True)
+    # Get readme, citation.cff, zipped repository, and replication streams for data and metadata
+    metadata_doc = get_exporter_metadata()
+    if "repository" in metadata_doc:
+        g = Github()
+        repo = g.get_repo(f"{metadata_doc['organisation']}/{metadata_doc['repo_name']}")
+        try:
+            readme = repo.get_contents("README.md")
+            with open(export_path_test / "README.md", "wb") as readme_file:
+                readme_file.write(base64.b64decode(readme.content))
+        except Exception as e:
+            print(f"Unable to save README.md. Reason: {e}")
+        try:
+            citation = repo.get_contents("CITATION.cff")
+            with open(export_path_test / "CITATION.cff", "wb") as citation_file:
+                citation_file.write(base64.b64decode(citation.content))
+        except Exception as e:
+            print(f"Unable to save CITATION.cff. Reason: {e}")
+
+        # print(repo.master_branch)
+        archive_url = repo.get_archive_link("tarball")
+        # archive_url.format({'archive_format': "zip", })
+        print(f"Downloading: {archive_url}")
+        try:
+            with requests.get(archive_url, stream=True) as archive_download:
+                with open(
+                    backup
+                    / f"{metadata_doc['organisation']}-{metadata_doc['repo_name']}.zip",
+                    "wb",
+                ) as archive_file:
+                    archive_download.raw.read = functools.partial(
+                        archive_download.raw.read, decode_content=True
+                    )
+
+                    shutil.copyfileobj(archive_download.raw, archive_file)
+        except Exception as e:
+            print(f"Unable to download repository. Reason: {e}")
+
+        def export_all_docs(token, db_prefix, notebook_id, filename):
+            auth_token = BearerAuth(token["jwt_token"])
+            url = f"{token['base_url']}/{db_prefix}-{notebook_id}/_all_docs"
+            with requests.post(
+                url,
+                auth=auth_token,
+                json={"include_docs": True, "attachments": True},
+                stream=True,
+            ) as response:
+                response.raise_for_status()
+                with open(filename, "wb") as json_file:
+                    # json.dump(response.json(), json_file)
+                    for chunk in tqdm(
+                        response.iter_content(chunk_size=8192),
+                        desc=f"Writing {notebook_id} {db_prefix} as json backup",
+                    ):
+                        json_file.write(chunk)
+
+        export_all_docs(
+            token,
+            "metadata",
+            notebook_id,
+            backup / f"metadata_db-{notebook_id}.json",
+        )
+        export_all_docs(
+            token, "data", notebook_id, backup / f"data_db-{notebook_id}.json"
+        )
 
     if export_path_test.exists():
         # print("Zipping output/ directory")
@@ -257,6 +441,7 @@ def export_notebook(button):
             with tqdm(
                 export_path_test.glob("**/*"),
                 desc="Preparing tar file",
+                total=len(list(export_path_test.glob("**/*"))),
             ) as iterator:
                 for file in iterator:
                     target_file = str(file).replace(
@@ -279,18 +464,30 @@ def export_notebook(button):
         files_path = ""
     else:
         files_path = "files/"
-    print(
-        f"Debug for brian: {running_in_voila}, {port_list}, {files_path}, {os.environ['SERVER_PORT']}, {pformat([note for note in notebookapp.list_running_servers()])}"
-    )
-    print(running_in_voila and os.environ["SERVER_PORT"] == "8866")
+    # print(
+    #     f"Debug for brian: {running_in_voila}, {port_list}, {files_path}, {os.environ.get('SERVER_PORT')}, {pformat([note for note in notebookapp.list_running_servers()])}"
+    # )
+    # print(running_in_voila and os.environ.get("SERVER_PORT") == "8866")
 
     for file in OUTPUT.glob("*.tgz"):
         local_url = HTML(
-            f"<li><a href='{os.environ['VOILA_BASE_URL']}{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
+            f"<li><a href='{os.environ.get('VOILA_BASE_URL', '/')}{files_path}{file}'>Download export: {str(file).replace('output/','')}</li>"
         )
         # local_file = FileLink(file, result_html_prefix="Click here to download: ")
         display(local_url)
     display(HTML("</ul>"))
+
+
+@out_url.capture()
+def get_notebook_readme(change):
+    out2.clear_output()
+    github_url_text.value = ""
+    # display(HTML())
+    doc = get_exporter_metadata()
+    # print(doc)
+
+    if "repository" in doc:
+        github_url_text.value = doc["repository"]
 
 
 # list_notebooks()
@@ -300,6 +497,7 @@ notebook_select = widgets.Dropdown(
     style=desc_style,
     layout=Layout(width="60%", height="50px"),
 )
+
 
 overwrite_checkbox = widgets.Checkbox(
     value=True,
