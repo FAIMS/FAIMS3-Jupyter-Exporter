@@ -388,33 +388,52 @@ def export_notebook(button):
         except Exception as e:
             print(f"Unable to download repository. Reason: {e}")
 
-        def export_all_docs(token, db_prefix, notebook_id, filename):
-            auth_token = BearerAuth(token["jwt_token"])
-            url = f"{token['base_url']}/{db_prefix}-{notebook_id}/_all_docs"
-            with requests.post(
-                url,
-                auth=auth_token,
-                json={"include_docs": True, "attachments": True},
-                stream=True,
-            ) as response:
-                response.raise_for_status()
+    def export_all_docs(token, db_prefix, notebook_id, filename):
+        auth_token = BearerAuth(token["jwt_token"])
+        url = f"{token['base_url']}/{db_prefix}-{notebook_id}/_all_docs"
+
+        # Get number of couchdb documents to fetch
+        prefetch_url = f"{token['base_url']}/{db_prefix}-{notebook_id}/_all_docs?limit=1"
+        with requests.get(prefetch_url, auth=auth_token) as response:
+            response.raise_for_status()
+            total = response.json()["total_rows"] + 2 # to account for start and end plus the total row count
+
+        print("Number of records to fetch", total)
+        current=0
+        with requests.post(
+            url,
+            auth=auth_token,
+            json={"include_docs": True, "attachments": True},
+            stream=True,
+        ) as response:
+            response.raise_for_status()
+            with tqdm(
+                    desc=f"Writing {db_prefix} as json backup",
+                    # set the total to total
+                    total=total,
+                    unit="recs",
+                    ) as iterator:
                 with open(filename, "wb") as json_file:
                     # json.dump(response.json(), json_file)
-                    for chunk in tqdm(
-                        response.iter_content(chunk_size=8192),
-                        desc=f"Writing {notebook_id} {db_prefix} as json backup",
-                    ):
+                    for chunk in response.iter_content(chunk_size=8192):
+                        # update tqdm iterator when we get to the end of a record, defined as a newline
+                        if "\n" in chunk.decode("utf-8"):
+                            # Count number of newlines, since a chunk may have zero or more
+                            current += chunk.decode("utf-8").count("\n")
+                            iterator.n = current
+                            iterator.refresh()
+                            # iterator.write(f"Current record: {current}")
                         json_file.write(chunk)
 
-        export_all_docs(
-            token,
-            "metadata",
-            notebook_id,
-            backup / f"metadata_db-{notebook_id}.json",
-        )
-        export_all_docs(
-            token, "data", notebook_id, backup / f"data_db-{notebook_id}.json"
-        )
+    export_all_docs(
+        token,
+        "metadata",
+        notebook_id,
+        backup / f"metadata_db-{notebook_id}.json",
+    )
+    export_all_docs(
+        token, "data", notebook_id, backup / f"data_db-{notebook_id}.json"
+    )
 
     if export_path_test.exists():
         # print("Zipping output/ directory")
